@@ -6,11 +6,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #define PI 3.14159265
+#include <boost/numeric/ublas/matrix.hpp>
 #define tiaoshi  puts("what?")
 using namespace std;
 int tot=0;
 map<string,int> contig2number,TNF2int;
 
+//æ‰“è¡¨ 
 static const std::string TN[] = { "GGTA", "AGCC", "AAAA", "ACAT", "AGTC", "ACGA", "CATA", "CGAA", "AAGT", "CAAA", "CCAG", "GGAC", "ATTA", "GATC", "CCTC",
 		"CTAA", "ACTA", "AGGC", "GCAA", "CCGC", "CGCC", "AAAC", "ACTC", "ATCC", "GACC", "GAGA", "ATAG", "ATCA", "CAGA", "AGTA", "ATGA", "AAAT", "TTAA", "TATA",
 		"AGTG", "AGCT", "CCAC", "GGCC", "ACCC", "GGGA", "GCGC", "ATAC", "CTGA", "TAGA", "ATAT", "GTCA", "CTCC", "ACAA", "ACCT", "TAAA", "AACG", "CGAG", "AGGG",
@@ -38,16 +40,29 @@ void preprocess(){
 		TNF2int[TN[i]]=TNF2int[TN_reverse_complement[i]]=i;
 }
 
+template<class T, class S>
+T random_unique(T begin, T end, S num_random) {
+    S left = std::distance(begin, end);
+    while (num_random--) {
+        T r = begin;
+        std::advance(r, rand()%left);
+        std::swap(*begin, *r);
+        ++begin;
+        --left;
+    }
+    return begin;
+}
+
 //Palindromic sequences
 static const std::string TNP[] = { "ACGT", "AGCT", "TCGA", "TGCA", "CATG", "CTAG", "GATC", "GTAC", "ATAT", "TATA", "CGCG", "GCGC", "AATT", "TTAA", "CCGG", "GGCC" };
 
 struct Sequence{
 	string SEQ;
 	vector<int> seq;
-	int TNF[256];
+	double TNF[256];
 	int number;
 	string Realname;
-	double sigma,average,length=0;
+	double sigma,average,length=0,logsize;
 	int category;
 	void initial(){memset(TNF,0,sizeof(TNF));}
 	void transfer(){
@@ -69,23 +84,26 @@ struct Sequence{
 		for(int i=0;i<=LEN-4;i++)
 			TNF[TNF2int[SEQ.substr(i,4)]]++;
 		for(int i=0;i<136;i++)
-			length+=TNF[i]*TNF[i];
+			length+=TNF[i]*TNF[i]*1.0;
 		length=sqrt(length);
+		for(int i=0;i<136;i++)
+			TNF[i]/=length;
 	}
 	Sequence(string h,string realname){
 		this->SEQ=h;
 		this->initial();
-		this->transfer();
+		//this->transfer();
 		this->statistic();
 		this->number=++tot;
 		this->Realname=realname;
 		this->category=0;
+		this->logsize=log10(SEQ.size());
 		contig2number[realname]=tot;
 //		cerr<<"struct realname: "<<realname<<" SEQ: "<<h<<'\n';
 	}
 };
 
-double vector_compare(Sequence A,Sequence B){
+double vector_compare(Sequence A,Sequence B,string type="cos"){
 //	cout<<"--------------------------------\n";
 	double ans=0;
 //	cout<<"SEQ1->";
@@ -97,7 +115,61 @@ double vector_compare(Sequence A,Sequence B){
 //	cout<<"ans -> "<<ans<<'\n'<<"length: "<<length1<<" "<<length2<<'\n';
 	double cosineangle=ans*1.0/(A.length*B.length);
 //	cout<<"--------------------------------\n";
-	return cosineangle;
+	if(type=="cos")return cosineangle;
+	else return sqrt(2-2*cosineangle);
+}
+
+double TNF_DISTANCE(Sequence A,Sequence B){
+	double LOG1=A.logsize,LOG2=B.logsize;
+	double b, c; //parameters
+	double d = vector_compare(A,B,"dis");
+	double lw11 = min(LOG1,LOG2);
+	double lw21 = max(LOG1,LOG2);
+	double lw12 = lw11 * lw11;
+	double lw13 = lw12 * lw11;
+	double lw14 = lw13 * lw11;
+	double lw15 = lw14 * lw11;
+	double lw16 = lw15 * lw11;
+	double lw17 = lw16 * lw11;
+	double lw22 = lw21 * lw21;
+	double lw23 = lw22 * lw21;
+	double lw24 = lw23 * lw21;
+	double lw25 = lw24 * lw21;
+	double lw26 = lw25 * lw21;
+
+	double prob;
+
+	b = 46349.1624324381 + -76092.3748553155 * lw11 + -639.918334183 * lw21 + 53873.3933743949 * lw12 + -156.6547554844 * lw22 + -21263.6010657275 * lw13
+			+ 64.7719132839 * lw23 + 5003.2646455284 * lw14 + -8.5014386744 * lw24 + -700.5825500292 * lw15 + 0.3968284526 * lw25 + 54.037542743 * lw16
+			+ -1.7713972342 * lw17 + 474.0850141891 * lw11 * lw21 + -23.966597785 * lw12 * lw22 + 0.7800219061 * lw13 * lw23 + -0.0138723693 * lw14 * lw24
+			+ 0.0001027543 * lw15 * lw25;
+	c = -443565.465710869 + 718862.10804858 * lw11 + 5114.1630934534 * lw21 + -501588.206183097 * lw12 + 784.4442123743 * lw22 + 194712.394138513 * lw13
+			+ -377.9645994741 * lw23 + -45088.7863182741 * lw14 + 50.5960513287 * lw24 + 6220.3310639927 * lw15 + -2.3670776453 * lw25 + -473.269785487 * lw16
+			+ 15.3213264134 * lw17 + -3282.8510348085 * lw11 * lw21 + 164.0438603974 * lw12 * lw22 + -5.2778800755 * lw13 * lw23 + 0.0929379305 * lw14 * lw24
+			+ -0.0006826817 * lw15 * lw25;
+
+	//logistic model
+	// prob = 1.0 / (1 + exp(-(b + c * d)));
+	// if (prob >= .1)  //second logistic model
+	double preProb = -(b + c * d); 
+        // preProb <= LOG(9.0) yields prob > 0.1, so use second logistic model
+	prob = preProb <= floor_preProb ? floor_prob: 1.0 / (1 + exp(preProb) );
+
+	if (prob >= floor_prob) { //second logistic model
+		b = 6770.9351457442 + -5933.7589419767 * lw11 + -2976.2879986855 * lw21 + 3279.7524685865 * lw12 + 1602.7544794819 * lw22 + -967.2906583423 * lw13
+				+ -462.0149190219 * lw23 + 159.8317289682 * lw14 + 74.4884405822 * lw24 + -14.0267151808 * lw15 + -6.3644917671 * lw25 + 0.5108811613 * lw16
+				+ 0.2252455343 * lw26 + 0.965040193 * lw12 * lw22 + -0.0546309127 * lw13 * lw23 + 0.0012917084 * lw14 * lw24 + -1.14383e-05 * lw15 * lw25;
+		c = 39406.5712626297 + -77863.1741143294 * lw11 + 9586.8761567725 * lw21 + 55360.1701572325 * lw12 + -5825.2491611377 * lw22 + -21887.8400068324 * lw13
+				+ 1751.6803621934 * lw23 + 5158.3764225203 * lw14 + -290.1765894829 * lw24 + -724.0348081819 * lw15 + 25.364646181 * lw25 + 56.0522105105 * lw16
+				+ -0.9172073892 * lw26 + -1.8470088417 * lw17 + 449.4660736502 * lw11 * lw21 + -24.4141920625 * lw12 * lw22 + 0.8465834103 * lw13 * lw23
+				+ -0.0158943762 * lw14 * lw24 + 0.0001235384 * lw15 * lw25;
+		//prob = 1.0 / (1 + exp(-(b + c * d)));
+		// prob = prob < .1 ? .1 : prob;
+		preProb = -(b + c * d); // exp(preProb) <= 9 yields prob >= 0.1, so preProb <= LOG(9.0) to calculate, otherwise use the floor
+		prob = preProb <= floor_preProb ? 1.0 / (1 + exp(preProb)) : floor_prob;
+	}
+
+	return prob;
 }
 
 vector<Sequence> Read_sequence_func(string filepath, int type=0){
@@ -335,11 +407,11 @@ int main(int argc,char *argv[]){
         std::string arg=argv[i];
         if (arg=="-meta"&&i+1<argc) {
             fileF=argv[i+1];
-            i++;  // Ìø¹ıÏÂÒ»¸ö²ÎÊı£¬ÒòÎªËüÊÇÎÄ¼şÃû
+            i++;  // è·³è¿‡ä¸‹ä¸€ä¸ªå‚æ•°ï¼Œå› ä¸ºå®ƒæ˜¯æ–‡ä»¶å
         } 
 		else if(arg=="-single"&&i+1<argc) {
             fileS=argv[i+1];
-            i++;  // Ìø¹ıÏÂÒ»¸ö²ÎÊı£¬ÒòÎªËüÊÇÎÄ¼şÃû
+            i++;  // è·³è¿‡ä¸‹ä¸€ä¸ªå‚æ•°ï¼Œå› ä¸ºå®ƒæ˜¯æ–‡ä»¶å
         }
         else if(arg=="-h"||arg=="-help"){
         	cerr<<"Usage: "<<argv[0]<<" -meta <file1> -single <file2> -threshold <value> -folder <filepath> [-maxiter <value>]"<<endl;
@@ -350,7 +422,7 @@ int main(int argc,char *argv[]){
 		}
 		else if(arg=="-threshold"&&i+1<argc) {
             threshold=stod(argv[i+1]);
-            i++;  // Ìø¹ıÏÂÒ»¸ö²ÎÊı£¬ÒòÎªËüÊÇÎÄ¼şÃû
+            i++;  // è·³è¿‡ä¸‹ä¸€ä¸ªå‚æ•°ï¼Œå› ä¸ºå®ƒæ˜¯æ–‡ä»¶å
         }
         else if(arg=="-maxiter"&&i+1<argc){
         	MAXITERATION=stoi(argv[i+1]);
@@ -366,7 +438,7 @@ int main(int argc,char *argv[]){
         cerr<<"For detail, you can use -h parameter"<<endl;
         return 1;
     }
-    // Ö´ĞĞ»ùÓÚ²ÎÊıµÄ²Ù×÷
+    // æ‰§è¡ŒåŸºäºå‚æ•°çš„æ“ä½œ
     //std::cout << "Source file: " << sourceFile << std::endl;
     preprocess();
 	cerr<<"preprocess completed"<<'\n';
@@ -380,7 +452,7 @@ int main(int argc,char *argv[]){
 //	READSTAFILE(Folder,Meta.size());
 //	for(int i=0;i<256;i++)cerr<<Meta[1].TNF[i];
 	for(int i=0;i<SCS.size();i++){
-		buildgraph(0,SCS[i].number,0);//Á¬½Óµ½³¬¼¶µã 
+		buildgraph(0,SCS[i].number,0);//è¿æ¥åˆ°è¶…çº§ç‚¹ 
 		buildgraph(SCS[i].number,0,0);
 		SCS[i].category=1;
 	}
@@ -392,7 +464,7 @@ int main(int argc,char *argv[]){
 //			cout<<"cos -> "<<cosinee<<'\n';
 //			cout<<"angle -> "<<rad2deg(angle)<<'\n';
 			if(rad2deg(angle)>threshold)continue;
-			buildgraph(Meta[i].number,0,sin(angle));//Á¬½Óµ¥Ï¸°ûºÍºê»ùÒò×éÏñµÄµã 
+			buildgraph(Meta[i].number,0,sin(angle));//è¿æ¥å•ç»†èƒå’Œå®åŸºå› ç»„åƒçš„ç‚¹ 
 			buildgraph(0,Meta[i].number,sin(angle));
 			break;
 			Meta[i].category=1;
@@ -406,7 +478,7 @@ int main(int argc,char *argv[]){
 //			cout<<"cos -> "<<cosinee<<'\n';
 //			cout<<"angle -> "<<rad2deg(angle)<<'\n';
 			if(rad2deg(angle)>threshold)continue;
-			buildgraph(Meta[i].number,Meta[j].number,sin(angle));//Á¬½Óµ¥Ï¸°ûºÍºê»ùÒò×éÏñµÄµã 
+			buildgraph(Meta[i].number,Meta[j].number,sin(angle));//è¿æ¥å•ç»†èƒå’Œå®åŸºå› ç»„åƒçš„ç‚¹ 
 			buildgraph(Meta[j].number,Meta[i].number,sin(angle));
 		}
 	}
