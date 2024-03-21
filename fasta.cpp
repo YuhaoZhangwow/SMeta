@@ -7,6 +7,8 @@
 #include <unistd.h>
 #define PI 3.14159265
 #include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/matrix_proxy.hpp>
+#include <boost/numeric/ublas/io.hpp>
 #define tiaoshi  puts("what?")
 using namespace std;
 int tot=0;
@@ -59,7 +61,7 @@ static const std::string TNP[] = { "ACGT", "AGCT", "TCGA", "TGCA", "CATG", "CTAG
 struct Sequence{
 	string SEQ;
 	vector<int> seq;
-	double TNF[256];
+	double TNF[136];
 	int number;
 	string Realname;
 	double sigma,average,length=0,logsize;
@@ -103,6 +105,20 @@ struct Sequence{
 	}
 };
 
+boost::numeric::ublas::matrix<double> matrixlization(vector<Sequence> T){
+	boost::numeric::ublas::matrix<double> mat(T.size(),136);
+	int i=0;
+	for(auto it = T.begin(); it != T.end(); ++it, ++i){
+		copy(it->TNF,it->TNF+136,&mat(i,0));
+	}
+	return mat;
+}
+
+boost::numeric::ublas::matrix<double> angle(boost::numeric::ublas::matrix<double> A){
+	auto AT = boost::numeric::ublas::trans(A);
+	return boost::numeric::ublas::prod(A, AT);
+}
+
 double vector_compare(Sequence A,Sequence B,string type="cos"){
 //	cout<<"--------------------------------\n";
 	double ans=0;
@@ -113,7 +129,8 @@ double vector_compare(Sequence A,Sequence B,string type="cos"){
 	for(int i=0;i<136;i++)
 		ans+=A.TNF[i]*B.TNF[i];
 //	cout<<"ans -> "<<ans<<'\n'<<"length: "<<length1<<" "<<length2<<'\n';
-	double cosineangle=ans*1.0/(A.length*B.length);
+	double cosineangle=ans;
+	//*1.0/(A.length*B.length);
 //	cout<<"--------------------------------\n";
 	if(type=="cos")return cosineangle;
 	else return sqrt(2-2*cosineangle);
