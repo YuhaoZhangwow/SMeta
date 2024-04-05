@@ -16,13 +16,14 @@ using namespace std;
 int tot=0;
 int maxEdges=200;
 double maxP=0.9;
-double cutoff=0.95;
+double cutoff=0.90;
 int debug=1;
 int COVER_NUMBER=2;
 double POLL_PARAMETER=0.75;
 int MAXITERATION = 3;
 
 map<string,int> contig2number,TNF2int;
+vector<int>FILE_NUMBER;
 
 #define N 5000000
 //struct node{
@@ -56,20 +57,30 @@ struct node {
 };
 
 vector<node> e,E; // 使用vector代替e数组
-vector<int> nxt, first;
+vector<int> nxt, First;
 int cnt = 0, CNT = 0; // cnt和CNT初始化为0，因为vector的下标从0开始
 
 void buildgraph(int u, int v, double w) {
     // 添加新的边信息
     e.push_back({u, v, w});
+    
+    if(debug){
+    	cerr<<"\nu->"<<u<<" v->"<<v<<" w->"<<w<<'\n';
+	}
+    
 }
 
 void buildGraphWithAdjacencyList(int u, int v, double w) {
     // 对于邻接表的构建，同时需要更新E, nxt, 和first
     E.push_back({u, v, w});
     CNT = E.size() - 1; // 更新CNT为最新的边的索引
-    nxt.push_back(first[u]); // nxt[CNT] = first[u];
-    first[u] = CNT; // 更新first[u]为最新的边的索引
+    nxt.push_back(First[u]); // nxt[CNT] = first[u];
+    First[u] = CNT; // 更新first[u]为最新的边的索引
+    
+    if(debug){
+    	cerr<<"\nU->"<<u<<" V->"<<v<<" W->"<<w<<'\n';
+	}
+    
 }
 
 vector<int> computeRanks(const vector<node>& arr) {
@@ -398,13 +409,26 @@ struct SEGMENT_TREE{
 					oanji=1;
 					break;
 				}
+				
+//				if(debug)cerr<<i;
+				
 				if(find_or_not){
 					if(high_credential){
+						
+//						if(debug){
+//							cerr<<"\nstart->"<<start<<" i->"<<i<<'\n';
+//						} 
+						
 						similarity=max(similarity,0.9);
 						buildgraph(start+i,it1->number,similarity);
 						buildgraph(it1->number,start+i,similarity);
 					}
 					else{
+						
+//						if(debug){
+//							cerr<<"\nstart->"<<start<<" i->"<<i<<'\n';
+//						} 
+						
 						buildgraph(start+i,it1->number,similarity);
 						buildgraph(it1->number,start+i,similarity);
 					}
@@ -575,7 +599,7 @@ void LPA(){
     	cerr<<"\n\n";
         for (int i = 0; i <=tot; ++i) {
             std::vector<int> neighbors;
-            for(int o=first[i];o;o=nxt[o])
+            for(int o=First[i];o;o=nxt[o])
             	neighbors.push_back(e[o].v);
             labelCounts.clear();
 
@@ -922,12 +946,13 @@ int label_propagation(vector<int>& membership, vector<int>& node_order) {
 //						}
 						
 						
-			for(int j=first[v1];j;j=nxt[j]){
+			for(int j=First[v1];j;j=nxt[j]){
 				int k=membership[E[j].v];
 				if (neighbor_scores.find(k) == neighbor_scores.end()) {
 					neighbor_scores[k] = 0.;
 					neighbor_counts[k] = 0;
 				}
+				if(fabs(E[j].w-1)<0.001)E[j].w=0.999;
 				neighbor_scores[k] += log(1. - E[j].w); //as p-value
 				neighbor_counts[k]++;
 			}
@@ -935,6 +960,11 @@ int label_propagation(vector<int>& membership, vector<int>& node_order) {
 			
 			if (neighbor_scores.size() > 0) {
 				for (auto &kv : neighbor_scores) {
+					
+//					if(debug){
+//						cerr<<"kv.first:"<<kv.first<<" neighbor_counts[kv.first]:"<<neighbor_counts[kv.first]<<" kv.second:"<<kv.second<<'\n';
+//					} 
+					
 					//Fisher's method to compare significance of different number of probs.
 					boost::math::chi_squared chi_sqr_dist(2 * neighbor_counts[kv.first]);
 					kv.second = boost::math::cdf(chi_sqr_dist, -2.0 * kv.second);
@@ -976,8 +1006,38 @@ int label_propagation(vector<int>& membership, vector<int>& node_order) {
 	return 0;
 }
 
+struct NodeIndex {
+    node edge;
+    int index;
+};
+
+bool compare(NodeIndex a, NodeIndex b) {
+    return a.edge.w > b.edge.w;
+}
+
+vector<int> getRankPositions(const vector<node>& a) {
+    int n = a.size();
+    vector<NodeIndex> nodeIndices(n);
+
+    // 填充结构体索引数组
+    for (int i = 0; i < n; ++i) {
+        nodeIndices[i] = {a[i], i};
+    }
+
+    // 根据结构体的w值进行排序
+    sort(nodeIndices.begin(), nodeIndices.end(), compare);
+
+    // 创建结果数组，并使用排序后的索引填充
+    vector<int> b(n);
+    for (int i = 0; i < n; ++i) {
+        b[i] = nodeIndices[i].index;
+    }
+
+    return b;
+}
+
 void clustering( const vector<node>& e, const vector<Sequence> &Meta){
-	vector<int> arr=computeRanks(e);
+	vector<int> arr=getRankPositions(e);
 	vector<int> node_order,mem;
 	vector<double> p_schedule2;
 	unordered_set<int> connected_nodes;
@@ -985,23 +1045,45 @@ void clustering( const vector<node>& e, const vector<Sequence> &Meta){
 		p_schedule2.push_back(maxP / 10 * i);
 		
 	int nobs=Meta.size();
-	mem.resize(nobs);
+	mem.resize(tot+1);
 	iota(mem.begin(),mem.end(),0);
 	for(int i=0;i<nobs;i++){
 		if(Meta[i].category)
-			mem[i]=Meta[i].category;
+			mem[i+1]=Meta[i].category;
 	}
 	
+	for(int i=nobs+1;i<=tot;i++){
+		mem[i]=lower_bound(FILE_NUMBER.begin(),FILE_NUMBER.end(),i-nobs)-FILE_NUMBER.begin()+nobs;
+	}
+	
+//	if(debug){
+//		for(auto & clu:mem){
+//			cerr<<clu<<" ";
+//		}
+//		puts("");
+//	}
+	
 	int which_p=0,nEdges=e.size();//undirect
+	First.resize(tot+1);//this is a bug
+	
+	if(debug)cout<<"nEdges->"<<nEdges<<'\n';
+	
 	for(int i=0;i<nEdges;i+=2){
 		int ii=e[arr[i]].u,jj=e[arr[i]].v;
+		
+		if(debug){
+			cerr<<"ii->"<<ii<<" jj->"<<jj<<" weight->"<<e[arr[i]].w<<'\n'; 
+			cerr<<"mem[ii]->"<<mem[ii]<<" mem[jj]->"<<mem[jj]<<'\n'; 
+		}
+		
 		if (mem[ii] != mem[jj]) { // || which_p < 5 allow all edges from first 5 schedule
+					
 			if (connected_nodes.find(ii) == connected_nodes.end()) {
-				node_order.push_back(ii);
+				if(ii<=nobs)node_order.push_back(ii);
 				connected_nodes.insert(ii);
 			}
 			if (connected_nodes.find(jj) == connected_nodes.end()) {
-				node_order.push_back(jj);
+				if(jj<=nobs)node_order.push_back(jj);
 				connected_nodes.insert(jj);
 			}
 
@@ -1019,10 +1101,10 @@ void clustering( const vector<node>& e, const vector<Sequence> &Meta){
 			buildGraphWithAdjacencyList(jj,ii,e[arr[i]].w);
 		}
 		
-		if (E.size() > 0 && ((double) connected_nodes.size() / Meta.size() >= p_schedule2[which_p] || i >= e.size() - 1) ){
-					//cout << "g2.sSCR.back(): " << g2.sSCR.back() << endl;
-					label_propagation(mem, node_order);
-
+		if (E.size() > 0 && ((double) connected_nodes.size() / Meta.size() >= p_schedule2[which_p] || i >= nEdges - 1) ){
+			//cout << "g2.sSCR.back(): " << g2.sSCR.back() << endl;
+			label_propagation(mem, node_order);
+			cerr<<"LPALPALPALPALPALPALPA\n";
 //					if (debug) {
 //						std::string osfileName("cluster.log." + boost::lexical_cast<std::string>(which_p));
 //						std::ofstream os(osfileName);
@@ -1052,10 +1134,24 @@ void clustering( const vector<node>& e, const vector<Sequence> &Meta){
 //						}
 //					}
 
-					if (++which_p == p_schedule2.size())
-						break;
-				}
+			if (++which_p == p_schedule2.size())
+				break;
+				
+//			if(debug){
+//				for(auto & clu:mem){
+//					cerr<<clu<<" ";
+//				}
+//				puts("");
+//			}
+		}
 		
+		if(debug){
+			for(auto & clu:mem){
+				cerr<<clu<<" ";
+			}
+			puts("");
+		}
+	
 	}
 }
 
@@ -1140,10 +1236,14 @@ int main(int argc,char *argv[]){
 		cerr<<"\nthe average length is: "<<AVG_LENGTH<<'\n';
 	}
 
+	FILE_NUMBER.push_back(0);
+
 	for(const auto& file:files){
+		
 		if(debug){
 			cerr<<"one of the names of the single is: "<<file<<'\n';
 		}
+		
 		ii++;
 		vector<Sequence> temp=Read_sequence_func(file,1,ii);
 		
@@ -1152,25 +1252,37 @@ int main(int argc,char *argv[]){
 //				cerr<<"this is the sequence of single cell sequence: "<<it->SEQ<<", and type is:"<<it->SINGLE_OR_NOT<<'\n';
 //			}
 //		}
+
+		FILE_NUMBER.push_back(FILE_NUMBER[FILE_NUMBER.size()-1]+temp.size());
 		
 		SCS.push_back(temp);
 		SEGMENT_TREE T(temp);
 		SCS_SEGMENT_TREE.push_back(T);
 	}
+	
+//	if(debug){
+//		for(auto &i:FILE_NUMBER){
+//			cerr<<i<<" ";
+//		}
+//	}
 
+	if(debug){
+		cerr<<"\nstarting to clustering metagenome with single cell sequences\n\n";
+	}
+	
 	for(auto it=SCS_SEGMENT_TREE.begin();it!=SCS_SEGMENT_TREE.end();++it){
 		it->detect_relation(Meta,cutoff);
 	}
 	
 	
-	cerr<<"Metasize:"<<Meta.size()<<'\n';
+//	if(debug)cerr<<"Metasize:"<<Meta.size()<<'\n';
 	
 	MATRIX_DOUBLE MatrixMeta=matrixlization(Meta);
 	//boost::numeric::ublas::matrix<double> MatrixSCS=matrixlization(SCS[0]);
 	MATRIX_DOUBLE MatrixCosMetaMeta=cosangle(MatrixMeta,MatrixMeta);
 	//boost::numeric::ublas::matrix<double> MatrixCosMetaSingle=cosangle(MatrixMeta,MatrixSCS);
 	
-	cerr<<MatrixCosMetaMeta<<'\n';
+//	if(debug)cerr<<MatrixCosMetaMeta<<'\n';
 	
 	int pTNF=gen_tnf_graph_sample(maxP,false,Meta.size(),MatrixCosMetaMeta);
 	
@@ -1181,6 +1293,8 @@ int main(int argc,char *argv[]){
 	gen_tnf_graph(maxP,Meta.size(),MatrixCosMetaMeta);
 	
 	clustering(e,Meta);
+	
+	cerr<<"This is the end of the program";
 	
 //	READSTAFILE(Folder,Meta.size());
 //	for(int i=0;i<256;i++)cerr<<Meta[1].TNF[i];
