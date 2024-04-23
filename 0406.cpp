@@ -2,6 +2,8 @@
 #include<Windows.h>
 #include<random>
 #include<dirent.h>
+#include <chrono>
+#include <thread>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -12,6 +14,10 @@
 #include <boost/math/distributions/chi_squared.hpp>
 #include <Eigen/Dense>
 #define tiaoshi  puts("what?")
+#include<omp.h>
+#include<execution>
+#include<Python.h>
+
 using namespace std;
 int tot=0;
 int maxEdges=200;
@@ -199,7 +205,7 @@ struct Sequence{
 		this->logsize=log10(SEQ.size());
 		this->SINGLE_OR_NOT=single;
 		contig2number[realname]=tot;
-//		cerr<<"struct realname: "<<realname<<" SEQ: "<<h<<'\n';
+//		cerr<<"struct realname: "<<realname<<" SEQ length: "<<h.size()<<'\n';
 	}
 };
 
@@ -221,9 +227,12 @@ void L2normal(array<double,136> &TNF){
 }
 
 vector<vector<array<double,136>>> seq2seg(Sequence SINGLE,int averagelength, int slices=2){
+	
+//	if(debug)cerr<<"Name in seq2seg: "<<SINGLE.Realname<<'\n';
 	//骞惰鍖?浠ュ悗鍐?
 	//姣忎釜鐗囨閮芥瀯閫犱竴涓悜閲忥紝涓€涓粍閲岄潰鏈夎嫢骞蹭釜鐗囨锛屼竴鏉″簭鍒楀悓鏃惰繕鏈塻lices涓粍
 	vector<vector<array<double,136>>> SEG;//鍏堟瀯閫犱竴涓璞?
+	if(SINGLE.SEQ.size()<=averagelength/slices+5)slices=1;
 	for(int i=1;i<=slices;i++)SEG.push_back(vector<array<double,136>>());//鍏堝紑杈熺┖闂达紝鏂逛究鍚庨潰鐩存帴浣跨敤
 	string h=SINGLE.SEQ;
 	int len=h.size(),offset=averagelength/slices;
@@ -286,14 +295,24 @@ struct SEGMENT_TREE{
 
 		segment_tree(int n, const vector<array<double, 136>>& orig_slice): slice(orig_slice) { // 閫氳繃 move 鏉ユ帴鏀?orig_slice 鐨勫壇鏈?
         	t.resize(this->slice.size()*4); // 娉ㄦ剰锛氳繖閲屽簲璇ヤ娇鐢?this->slice.size()
+        	
+//        	if(debug)cerr<<"this is checkpoint8\n";
+//			if(debug)cerr<<"n->"<<n<<'\n';
+        	
         	build(1, 1, n);
         	
+//        	if(debug)cerr<<"this is checkpoint9\n";
 //			if(debug){
 //        		puts("attention"); 
 //			}
 			 
 			L2normal(t[1].TNFfrequency);
+			
+//			if(debug)cerr<<"this is checkpoint10\n";
+			
 			this->slice.clear();
+			
+//			if(debug)cerr<<"this is checkpoint11\n";
     	}
 
 		void pushup(int p){
@@ -304,11 +323,12 @@ struct SEGMENT_TREE{
 
 		void build(int p,int l,int r){
 			
-			if(debug){
-				cout<<"p->"<<p<<" l->"<<l<<" r->"<<r<<'\n';
-			}
+//			if(debug){
+//				cout<<"p->"<<p<<" l->"<<l<<" r->"<<r<<'\n';
+//			}
 			
 			t[p].l=l,t[p].r=r;
+			
 			if(l==r){
 				t[p].TNFfrequency=this->slice[l-1];
 				
@@ -385,23 +405,47 @@ struct SEGMENT_TREE{
 	ALL_SEQ_TREE_SET SINGLE_SET;
 
 	SEGMENT_TREE(vector<Sequence> DNA){
+		
+//		if(debug)cerr<<"this is checkpoint3\n";
+		
 		start=DNA[0].number;
 		category=DNA[0].category;
 		for(auto it=DNA.begin();it!=DNA.end();++it){
+			
+//			if(debug)cerr<<"this is checkpoint4\n";
+			
 			GROUP group=seq2seg(*it,AVG_LENGTH,COVER_NUMBER);
+			
+//			if(debug)cerr<<"this is checkpoint5\n";
+			
 			ONE_SEQ_TREE_SET TEMP1;
 			for(auto itt=group.begin();itt!=group.end();++itt){
+				
+//				if(debug)cerr<<"this is checkpoint6\n";
+				
 				segment_tree T(itt->size(),*itt);
+				
+//				if(debug)cerr<<"this is checkpoint7\n";
+				
 				TEMP1.push_back(T);
 			}
 			SEQ_SET.push_back(group);
 			SINGLE_SET.push_back(TEMP1);
 		}
+		
+		
 	}
 
 	void detect_relation(vector<Sequence> META, double cutoff){
 		int number_of_seq=SINGLE_SET.size();
-		for(auto it1=META.begin();it1!=META.end();it1++){
+		int META_SIZE=META.size()/10,icount=0;
+		cout<<'\n'<<"Progress bar:\n";
+		for(auto it1=META.begin();it1!=META.end();it1++,icount++){
+			
+			if(icount%META_SIZE==0){
+				cerr<<"O";
+			}
+			
 			int flag=0,oanji=0,high_credential=0,i=0;
 			for(auto it2=SINGLE_SET.begin();it2!=SINGLE_SET.end();++it2,++i){//寰幆鍗曠粏鑳為噷姣忎竴鏉″簭鍒?
 				double similarity=0;bool find_or_not=false;
@@ -452,7 +496,7 @@ struct SEGMENT_TREE{
 	}
 };
 
-boost::numeric::ublas::matrix<double> matrixlization(vector<Sequence> T){
+boost::numeric::ublas::matrix<double> matrixlization(vector<Sequence>& T){
 	boost::numeric::ublas::matrix<double> mat(T.size(),136);
 	int i=0;
 	for(auto it = T.begin(); it != T.end(); ++it, ++i){
@@ -461,9 +505,28 @@ boost::numeric::ublas::matrix<double> matrixlization(vector<Sequence> T){
 	return mat;
 }
 
+Eigen::MatrixXd matrixlizationEigen(const std::vector<Sequence>& T) {
+    // 创建一个 T.size() x 136 大小的 Eigen 矩阵
+    Eigen::MatrixXd mat(T.size(), 136);
+
+    // 遍历 T 中的每个 Sequence
+    for (int i = 0; i < T.size(); ++i) {
+        // 使用 Eigen 的 Map 类来直接映射内存
+        mat.row(i) = Eigen::Map<const Eigen::RowVectorXd>(T[i].TNF, 136);
+    }
+
+    return mat;
+}
+
 boost::numeric::ublas::matrix<double> cosangle(boost::numeric::ublas::matrix<double> A, boost::numeric::ublas::matrix<double> B){
 	auto T = boost::numeric::ublas::trans(B);
 	return boost::numeric::ublas::prod(A,T);
+}
+
+Eigen::MatrixXd cosangleEigen(const Eigen::MatrixXd& A, const Eigen::MatrixXd& B) {
+    // 使用 Eigen 的矩阵转置和乘法操作
+    Eigen::MatrixXd T = B.transpose();
+    return A * T;
 }
 
 double vector_compare(Sequence A,Sequence B,string type="cos"){
@@ -843,6 +906,64 @@ int gen_tnf_graph_sample(double coverage, bool full, int nobs, const MATRIX_DOUB
 	return p;
 }
 
+int gen_tnf_graph_sampleEigen(double coverage, bool full, int nobs, const Eigen::MatrixXd& matrix){
+	
+	std::vector<unsigned char> connected_nodes;
+    connected_nodes.resize(nobs);
+	int p = 999, pp = 1000;
+	double cov = 0, pcov = 0;
+    int round = 0;
+
+	for (; p > 500; ) {
+        round++;
+
+		double cutoff = (double) p / 1000.;
+
+		#pragma omp parallel for
+		for (int i = 0; i < nobs; ++i) {
+			int kk = nobs;
+			for (int j = i + 1; j < kk; ++j) {
+				double s = matrix(i,j);
+				if (s >= cutoff) {
+					connected_nodes[i] = 1;
+					connected_nodes[j] = 1;
+				}
+			}
+		}
+
+		//cov = (double) connected_nodes.size() / _nobs;
+		int counton = 0;
+		#pragma omp parallel for reduction(+:counton)
+                for (int i = 0; i < nobs; i++) {
+                    if (connected_nodes[i] == 1) counton++;
+                }
+		cov = (double) counton / nobs;
+
+		if (cov >= coverage) {
+			//previous cov is closer to coverage then choose prev p instead current p
+			if (cov - coverage > coverage - pcov) {
+				p = pp;
+				cov = pcov;
+			}
+
+			break;
+		} else
+		//	verbose_message("Preparing TNF Graph Building [pTNF = %2.1f; %d / %d (P = %2.2f%%) round %d]               \r", (double) p / 10., counton, nobs, cov * 100, round);
+
+		pp = p; pcov = cov;
+
+		if (p > 990) //99.9, 99.6, 99.3, 99.0
+			p -= rand() % 3 + 1; //choose from 1,2,3
+		else if (p > 900) //98.5, 98, 97.5, ... 90.0
+			p -= rand() % 3 + 3; //choose from 3,4,5
+		else //89, 88, 87, ..., 70
+			p -= rand() % 3 + 9; //choose from 9,10,11
+
+	}
+	
+	return p;
+}
+
 struct CompareEdge {
 	constexpr bool operator() (std::pair<int, double> const & a, std::pair<int, double> const & b) const noexcept {
         return a.second > b.second;
@@ -851,6 +972,58 @@ struct CompareEdge {
 
 #include "tile.h"
 void gen_tnf_graph(double cutoff, int nobs, const MATRIX_DOUBLE& matrix) {
+	
+	int TILE = 10;
+	try {
+		TILE = std::max((int) ( ( CacheSize() * 1024. ) / ( 2* sizeof(float) * 136 + maxEdges * ( 2 * sizeof(int) + 1 * sizeof(double) ) ) ), (int) 10);
+	} catch (...) {}
+
+//#pragma omp parallel for schedule(dynamic, 1) proc_bind(spread) reduction(merge_int: from) reduction(merge_int: to) reduction(merge_double: sTNF) 
+//#pragma omp parallel for schedule(dynamic, 1) reduction(merge_int: from) reduction(merge_int: to) reduction(merge_double: sTNF) 
+    for ( int ii= 0; ii < nobs; ii+=TILE ){
+        std::vector<std::priority_queue<std::pair<int, double>, std::vector<std::pair<int, double> >, CompareEdge> > edges(TILE);
+
+        for ( int jj= 0; jj < nobs; jj+=TILE ) {
+            for (int i = ii; i < ii+TILE && i<nobs; ++i){
+                int que_index = i-ii;
+                for (int j = jj; j < jj+TILE && j < nobs; ++j) {
+                    if (i == j)
+                        continue;
+                    double sTNF = matrix(i, j);
+                    if (sTNF > cutoff &&
+                        (edges[que_index].size() < maxEdges || (edges[que_index].size() == maxEdges && sTNF > edges[que_index].top().second))) {
+                        if (edges[que_index].size() == maxEdges)
+                            edges[que_index].pop();
+                        edges[que_index].push(std::make_pair(j, sTNF));
+                    }
+                }
+            }
+        }
+        for ( int k = 0; k < TILE; ++k) {
+            while (!edges[k].empty()) {
+                std::pair<int, double> edge = edges[k].top();
+                if ( (ii+k) < edge.first) {
+//                    sTNF.push_back(edge.second);
+//                    from.push_back((ii+k));
+//                    to.push_back(edge.first);
+                    buildgraph(edge.first,ii+k,edge.second);
+                    buildgraph(ii+k,edge.first,edge.second);
+                }
+                edges[k].pop();
+            }
+        }
+//        if (verbose) {
+//            progress.track(TILE);
+//            if (omp_get_thread_num() == 0 && progress.isStepMarker()) {
+//                verbose_message("Building TNF Graph %s [%.1fGb / %.1fGb]                           \r",
+//                                progress.getProgress(), getUsedPhysMem(), getTotalPhysMem() / 1024 / 1024);
+//            }
+//        }
+    }
+
+}
+
+void gen_tnf_graphEigen(double cutoff, int nobs, const Eigen::MatrixXd& matrix) {
 	
 	int TILE = 10;
 	try {
@@ -1051,6 +1224,7 @@ vector<int> getRankPositions(const vector<node>& a) {
 }
 
 void clustering( const vector<node>& e, const vector<Sequence> &Meta){
+	int rounds=0;
 	vector<int> arr=getRankPositions(e);
 	vector<int> node_order,mem;
 	vector<double> p_schedule2;
@@ -1118,7 +1292,11 @@ void clustering( const vector<node>& e, const vector<Sequence> &Meta){
 		if (E.size() > 0 && ((double) connected_nodes.size() / Meta.size() >= p_schedule2[which_p] || i >= nEdges - 1) ){
 			//cout << "g2.sSCR.back(): " << g2.sSCR.back() << endl;
 			label_propagation(mem, node_order);
-			cerr<<"LPALPALPALPALPALPALPA\n";
+			++rounds;
+			if(rounds%5==0){
+				cerr<<"round "<<rounds<<'\n';
+			}
+			
 //					if (debug) {
 //						std::string osfileName("cluster.log." + boost::lexical_cast<std::string>(which_p));
 //						std::ofstream os(osfileName);
@@ -1159,14 +1337,25 @@ void clustering( const vector<node>& e, const vector<Sequence> &Meta){
 //			}
 		}
 		
-		if(debug){
-			for(auto & clu:mem){
-				cerr<<clu<<" ";
-			}
-			puts("");
-		}
+//		if(debug){
+//			for(auto & clu:mem){
+//				cerr<<clu<<" ";
+//			}
+//			puts("");
+//		}
 	
 	}
+	
+	ofstream result_file("result.txt");
+	
+	if(debug){
+		for(auto & clu:mem){
+			result_file<<clu<<" ";
+		}
+		result_file<<endl;
+	}
+		
+		
 }
 
 
@@ -1229,17 +1418,17 @@ int main(int argc,char *argv[]){
     }
     
     
-	if (argc<8) {
-        cerr<<"Usage: "<<argv[0]<<" -meta <file1> -single <file2> -threshold <value> -folder <filepath> [-maxiter <value>]"<<endl;
-        cerr<<"For detail, you can use -h parameter"<<endl;
-        return 1;
-    }
+//	if (argc<8) {
+//        cerr<<"Usage: "<<argv[0]<<" -meta <file1> -single <file2> -threshold <value> -folder <filepath> [-maxiter <value>]"<<endl;
+//        cerr<<"For detail, you can use -h parameter"<<endl;
+//        return 1;
+//    }
     
-//    if(debug){
-//    	fileF="C:\\Users\\okura\\Downloads\\euk_test\\euk_test\\GCF_000227135.1_ASM22713v2_genomic.fna";
-//    	fileS="C:\\Users\\okura\\Downloads\\testdata\\single";
-//    	Folder="C:\\Users\\okura\\Downloads\\testdata\\statis";
-//	}
+    if(debug){
+    	fileF="C:\\Users\\okura\\Downloads\\testdata\\metagenome.fasta";
+    	fileS="C:\\Users\\okura\\Downloads\\euk_test\\euk_test";
+    	Folder="C:\\Users\\okura\\Downloads\\testdata\\statis";
+	}
 // this is deprecated, DO NOT USE
     
     // 执锟叫伙拷锟节诧拷锟斤拷锟侥诧拷锟斤拷
@@ -1303,27 +1492,51 @@ int main(int argc,char *argv[]){
 		cerr<<"\nstarting to clustering metagenome with single cell sequences\n\n";
 	}
 	
-	for(auto it=SCS_SEGMENT_TREE.begin();it!=SCS_SEGMENT_TREE.end();++it){
-		it->detect_relation(Meta,cutoff);
-	}
+	auto MatrixMeta=matrixlizationEigen(Meta);
 	
+	Eigen::MatrixXd MatrixCosMetaMeta;
+	
+	
+//	std::thread thread1([&]() {
+		
+		if(debug)cerr<<"\ncomplete matrixlization\n";
+		
+		//boost::numeric::ublas::matrix<double> MatrixSCS=matrixlization(SCS[0]);
+		MatrixCosMetaMeta=cosangleEigen(MatrixMeta,MatrixMeta);
+		if(debug)cerr<<"complete cosine matrix calculation\n";
+//	});
+	
+//	thread thread2([&](){
+//		#pragma omp parallel for
+		for(auto it=SCS_SEGMENT_TREE.begin();it!=SCS_SEGMENT_TREE.end();++it){
+			
+			if(debug){
+				cerr<<"\nnew single cell sequencing going on ";
+			}
+			
+			it->detect_relation(Meta,cutoff);
+		}
+//	});
 	
 //	if(debug)cerr<<"Metasize:"<<Meta.size()<<'\n';
 	
-	MATRIX_DOUBLE MatrixMeta=matrixlization(Meta);
-	//boost::numeric::ublas::matrix<double> MatrixSCS=matrixlization(SCS[0]);
-	MATRIX_DOUBLE MatrixCosMetaMeta=cosangle(MatrixMeta,MatrixMeta);
+//	thread1.join();
+//    thread2.join();
+	
+	
 	//boost::numeric::ublas::matrix<double> MatrixCosMetaSingle=cosangle(MatrixMeta,MatrixSCS);
 	
 //	if(debug)cerr<<MatrixCosMetaMeta<<'\n';
 	
-	int pTNF=gen_tnf_graph_sample(maxP,false,Meta.size(),MatrixCosMetaMeta);
+	int pTNF=gen_tnf_graph_sampleEigen(maxP,false,Meta.size(),MatrixCosMetaMeta);
+	
+	if(debug)cerr<<"completed calculating pTNF value\n";
 	
 	if(debug){
 		cout<<"the pTNF is:"<<pTNF<<'\n';
 	}
 	
-	gen_tnf_graph(maxP,Meta.size(),MatrixCosMetaMeta);
+	gen_tnf_graphEigen(maxP,Meta.size(),MatrixCosMetaMeta);
 	
 	clustering(e,Meta);
 	
@@ -1381,5 +1594,8 @@ int main(int argc,char *argv[]){
 //fasta.exe -meta C:\Users\okura\Downloads\testdata\Meta_GPT.fasta -single C:\Users\okura\Downloads\testdata\singlegpt -threshold 30 -folder C:\Users\okura\Downloads\testdata\statis
 
 //fasta.exe -meta C:\Users\okura\Downloads\testdata\unique_sequences.fasta -single C:\Users\okura\Downloads\testdata\single0406 -threshold 30 -folder C:\Users\okura\Downloads\testdata\statis
+
+// fasta.exe -meta C:\Users\okura\Downloads\testdata\metagenome.fasta -single C:\Users\okura\Downloads\euk_test\euk_test -threshold 30 -folder C:\Users\okura\Downloads\testdata\statis
+
 
 
