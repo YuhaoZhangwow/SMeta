@@ -1380,6 +1380,7 @@ void clustering( const vector<node>& e, const vector<Sequence> &Meta){
 
 int main(int argc,char *argv[]){
 
+	ios::sync_with_stdio(false);
     preprocess();
 	cerr<<"preprocess completed"<<'\n';
 	
@@ -1445,7 +1446,7 @@ int main(int argc,char *argv[]){
     
     if(debug){
     	fileF="C:\\Users\\okura\\Downloads\\testdata\\metagenome.fasta";
-    	fileS="C:\\Users\\okura\\Downloads\\euk_test\\euk_test";
+    	fileS="C:\\Users\\okura\\Downloads\\euk_test\\empty";
     	Folder="C:\\Users\\okura\\Downloads\\testdata\\statis";
 	}
 // this is deprecated, DO NOT USE
