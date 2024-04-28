@@ -21,11 +21,11 @@ using namespace std;
 int tot=0;
 int maxEdges=200;
 double maxP=0.95;
-double cutoff=0.75;
 int debug=1;
 int COVER_NUMBER=2;
-double POLL_PARAMETER=0.1;
+double POLL_PARAMETER=0.2;
 int MAXITERATION = 3;
+int edge_in_segment_tree=0;
 
 map<string,int> contig2number,TNF2int;
 vector<int>FILE_NUMBER;
@@ -484,8 +484,8 @@ struct SEGMENT_TREE{
 //						if(debug){
 //							cerr<<"\nstart->"<<start<<" i->"<<i<<'\n';
 //						} 
-						
-						similarity=max(similarity,0.9);
+						++edge_in_segment_tree;
+						similarity=max(similarity,0.99);
 						buildgraph(start+i,it1->number,similarity);
 //						buildgraph(it1->number,start+i,similarity);
 					}
@@ -494,7 +494,7 @@ struct SEGMENT_TREE{
 //						if(debug){
 //							cerr<<"\nstart->"<<start<<" i->"<<i<<'\n';
 //						} 
-						
+						++edge_in_segment_tree;
 						buildgraph(start+i,it1->number,similarity);
 //						buildgraph(it1->number,start+i,similarity);
 					}
@@ -1377,8 +1377,8 @@ void clustering( const vector<node>& e, const vector<Sequence> &Meta){
 	ofstream result_file("result.txt");
 	
 	if(debug){
-		for(auto & clu:mem){
-			result_file<<clu<<" ";
+		for(int i=1;i<=Meta.size();i++){
+			result_file<<mem[i]<<" ";
 		}
 		result_file<<endl;
 	}
@@ -1558,9 +1558,11 @@ int main(int argc,char *argv[]){
         }
         
         SCS_SEGMENT_TREE[i].detect_relation(Meta, pTNF/1000.0);
+        cout<<"\nedges in single cell and metagenome is "<<edge_in_segment_tree<<'\n';
+        edge_in_segment_tree=0;
     }
 //	});
-
+	
 	MatrixMeta=matrixlizationEigen(Meta,0);
 	
 	for(int i=0;i<how_many;i++){
