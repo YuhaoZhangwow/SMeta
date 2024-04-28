@@ -1117,7 +1117,7 @@ void gen_tnf_graphEigen(double cutoff, int nobs, const Eigen::MatrixXd& matrix,i
 //                    sTNF.push_back(edge.second);
 //                    from.push_back((ii+k));
 //                    to.push_back(edge.first);
-                    buildgraph(edge.first+batch_size*which_matrix_j,ii+k+batch_size*which_matrix_i,edge.second);
+                    buildgraph(1+edge.first+batch_size*which_matrix_j,1+ii+k+batch_size*which_matrix_i,edge.second);
 //                  buildgraph(ii+k,edge.first,edge.second);
                 }
                 edges[k].pop();
