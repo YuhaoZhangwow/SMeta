@@ -1,5 +1,5 @@
 
-# FASTA Processor Tool
+# SMeta Tool
 
 This command-line tool facilitates the processing of FASTA sequences based on the provided metadata and sequence files. It's designed to be flexible, allowing various settings through optional parameters to meet different processing needs.
 
