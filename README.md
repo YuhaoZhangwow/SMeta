@@ -39,7 +39,7 @@ fasta.exe -meta <metadata_path> -single <sequence_path> [optional parameters]
 - **-maxedgeseg `<number>`**: Maximum number of edges per metagenome sequence built during alignment with single cell sequences and metagenome sequences(default: `50`).
 - **-debug/-d`<1 or 0>`**: Debug mode, enable with `1` and disable with `0`, `1` will provide progress bar and other information like the number of edges built (default: `1`).
 - **-maxp `<double>`**: Maximum threshold for the proportion of points that Label Propagation Algorithm should cover(default: `0.95`).
-- **-time/-t/-T `<1 or 0>`**: Enable timing in process (default: 0).
+- **-time/-t/-T `<1 or 0>`**: Enable timing in process (default: `0`).
 
 ### Examples
 
