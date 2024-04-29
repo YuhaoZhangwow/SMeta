@@ -28,12 +28,13 @@ fasta.exe -meta <metadata_path> -single <sequence_path>
 
 ### Parameters
 
-- **-meta `<string>`**: Path to the metadata file (required).
-- **-single `<string>`**: Path to the single sequence directory, the program will read all files under this path (required).
+- **-help/-h**: Help information.
+- **-meta/-m`<string>`**: Path to the metadata file (required).
+- **-single/-s`<string>`**: Path to the single sequence directory, the program will read all files under this path (required).
 - **-slice `<number>`**: Number of segment trees per single cell sequence you would like to generate for processing (default: `2`).
 - **-maxedges `<number>`**: Maximum number of edges built for one metagenome sequence during alignment inside metagenome sequences(default: `200`).
 - **-maxedgeseg `<number>`**: Maximum number of edges per metagenome sequence built during alignment with single cell sequences and metagenome sequences(default: `50`).
-- **-debug `<1 or 0>`**: Debug mode, enable with `1` and disable with `0`, `1` will provide progress bar and other information like the number of edges built (default: `1`).
+- **-debug/-d`<1 or 0>`**: Debug mode, enable with `1` and disable with `0`, `1` will provide progress bar and other information like the number of edges built (default: `1`).
 - **-maxp `<double>`**: Maximum threshold for the proportion of points that Label Propagation Algorithm should cover(default: `0.95`).
 
 ### Examples
