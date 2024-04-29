@@ -1465,17 +1465,17 @@ int main(int argc,char *argv[]){
     }
     
     
-	if (argc<6) {
-        cerr<<"Usage: "<<argv[0]<<" -meta <file1> -single <file2> -threshold <value> -folder <filepath> [-maxiter <value>]"<<endl;
-        cerr<<"For detail, you can use -h parameter"<<endl;
-        return 1;
-    }
+//	if (argc<6) {
+//        cerr<<"Usage: "<<argv[0]<<" -meta <file1> -single <file2> -threshold <value> -folder <filepath> [-maxiter <value>]"<<endl;
+//        cerr<<"For detail, you can use -h parameter"<<endl;
+//        return 1;
+//    }
     
-//    if(debug){
-//    	fileF="C:\\Users\\okura\\Downloads\\testdata\\metagenome.fasta";
-//    	fileS="C:\\Users\\okura\\Downloads\\euk_test\\euk_test";
-//    	Folder="C:\\Users\\okura\\Downloads\\testdata\\statis";
-//	}
+    if(debug){
+    	fileF="C:\\Users\\okura\\Downloads\\testdata\\metagenome.fasta";
+    	fileS="C:\\Users\\okura\\Downloads\\euk_test\\euk_test";
+    	Folder="C:\\Users\\okura\\Downloads\\testdata\\statis";
+	}
 // this is deprecated, DO NOT USE
     
     // 执锟叫伙拷锟节诧拷锟斤拷锟侥诧拷锟斤拷
@@ -1534,6 +1534,7 @@ int main(int argc,char *argv[]){
 //		}
 //	}
 	auto MatrixMeta=matrixlizationEigen(Meta,1);
+	
 	int how_many=(Meta.size()+19999)/20000;
 //	std::thread thread1([&]() {	
 	if(debug)cerr<<"\ncomplete matrixlization with shuffle\n";
@@ -1598,7 +1599,7 @@ int main(int argc,char *argv[]){
 	
 	cerr<<"\nThis is the end of the program\n";
 	
-	system("python sta.py");
+//	system("python sta.py");
 //	READSTAFILE(Folder,Meta.size());
 //	for(int i=0;i<256;i++)cerr<<Meta[1].TNF[i];
 // 	for(int i=0;i<SCS.size();i++){
