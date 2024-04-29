@@ -28,11 +28,11 @@ fasta.exe -meta <metadata_path> -single <sequence_path> [optional parameters]
 
 ### Parameters
 
-## Mandatory Parameters
+#### Mandatory Parameters
 - **-meta/-m`<string>`**: Path to the metadata file [Mandatory].
 - **-single/-s`<string>`**: Path to the single sequence directory, the program will read all files under this path [Mandatory].
 
-## Optional Parameters
+#### Optional Parameters
 - **-help/-h**: Help information.
 - **-slice `<number>`**: Number of segment trees per single cell sequence you would like to generate for processing (default: `2`).
 - **-maxedges `<number>`**: Maximum number of edges built for one metagenome sequence during alignment inside metagenome sequences(default: `200`).
