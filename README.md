@@ -23,14 +23,17 @@ To run the tool, you'll need to open a command prompt and navigate to the direct
 ### Basic Command
 
 ```
-fasta.exe -meta <metadata_path> -single <sequence_path>
+fasta.exe -meta <metadata_path> -single <sequence_path> [optional parameters]
 ```
 
 ### Parameters
 
+## Mandatory Parameters
+- **-meta/-m`<string>`**: Path to the metadata file [Mandatory].
+- **-single/-s`<string>`**: Path to the single sequence directory, the program will read all files under this path [Mandatory].
+- 
+## Optional Parameters
 - **-help/-h**: Help information.
-- **-meta/-m`<string>`**: Path to the metadata file (required).
-- **-single/-s`<string>`**: Path to the single sequence directory, the program will read all files under this path (required).
 - **-slice `<number>`**: Number of segment trees per single cell sequence you would like to generate for processing (default: `2`).
 - **-maxedges `<number>`**: Maximum number of edges built for one metagenome sequence during alignment inside metagenome sequences(default: `200`).
 - **-maxedgeseg `<number>`**: Maximum number of edges per metagenome sequence built during alignment with single cell sequences and metagenome sequences(default: `50`).
