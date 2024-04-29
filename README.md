@@ -52,7 +52,7 @@ fasta.exe -meta "C:/data/metadata.txt" -single "C:/data/sequence.fasta"
 **Running with All Parameters:**
 
 ```bash
-fasta.exe -meta "C:/data/metadata.txt" -single "C:/data/sequence.fasta" -slice 3 -maxedges 250 -maxedgeseg 75 -debug 1 -maxp 0.92
+fasta.exe -meta "C:/data/metadata.txt" -single "C:/data/sequence.fasta" -slice 3 -maxedges 250 -maxedgeseg 75 -debug 1 -maxp 0.92 -t 1
 ```
 
 ### Compilation For environment other than Windows
