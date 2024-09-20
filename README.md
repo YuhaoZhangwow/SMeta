@@ -18,7 +18,7 @@ Download the latest release of `fasta.exe` from the Releases section of this Git
 
 ## Usage
 
-To run the tool, you'll need to open a command prompt and navigate to the directory where `fasta.exe` is located.
+To run the tool, you'll need to open a command prompt and navigate to the directory where `fasta.exe` is located. The output will be generated in result.txt
 
 ### Basic Command
 
